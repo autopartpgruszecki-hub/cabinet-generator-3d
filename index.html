@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generator szafki – 3D podgląd + parametry</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, Arial, sans-serif; color: #111; }
+    header { padding: 14px 16px; border-bottom: 1px solid #e5e5e5; }
+    main { display: grid; grid-template-columns: 360px 1fr; gap: 12px; padding: 12px; }
+    @media (max-width: 900px){ main { grid-template-columns: 1fr; } }
+    .card { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
+    label { display:block; font-size: 14px; margin-top: 10px; }
+    input { width: 100%; padding: 8px 10px; margin-top: 6px; border: 1px solid #d0d0d0; border-radius: 8px; }
+    button { margin-top: 12px; padding: 9px 12px; border-radius: 10px; border: 1px solid #d0d0d0; background: #f7f7f7; cursor: pointer; }
+    button:hover { background: #efefef; }
+    #view { width: 100%; height: calc(100vh - 120px); border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5; }
+    .hint { font-size: 13px; line-height: 1.35; color: #333; margin-top: 10px; }
+    code { background:#f4f4f4; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+<header>
+  <b>Generator szafki – 3D podgląd</b>
+  <div class="hint">Lewy przycisk myszy: obrót · Prawy: przesunięcie · Kółko: zoom</div>
+</header>
+
+<main>
+  <section class="card">
+    <h3 style="margin:0 0 6px;">Parametry (mm)</h3>
+
+    <label>Szerokość (W)
+      <input id="W" type="number" value="600" min="200" max="2000" step="1">
+    </label>
+
+    <label>Wysokość (H)
+      <input id="H" type="number" value="720" min="200" max="2600" step="1">
+    </label>
+
+    <label>Głębokość (D)
+      <input id="D" type="number" value="560" min="150" max="1200" step="1">
+    </label>
+
+    <label>Grubość płyty (T)
+      <input id="T" type="number" value="18" min="12" max="28" step="1">
+    </label>
+
+    <label>Liczba półek
+      <input id="S" type="number" value="2" min="0" max="10" step="1">
+    </label>
+
+    <button id="btn">Generuj 3D</button>
+
+    <div class="hint">
+      To jest podgląd 3D korpusu (boki, góra, dół, półki).<br>
+      Jeśli chcesz: dodam fronty/drzwi, plecy, przegrody, oraz 2D rysunki płyt z otworami.
+    </div>
+
+    <div class="hint">
+      Jeśli zobaczysz pusty ekran: możliwe, że Twoja sieć blokuje CDN. Wtedy zrobimy wersję offline bez internetu.
+    </div>
+  </section>
+
+  <section id="view"></section>
+</main>
+
+<!-- Three.js z CDN (wymaga internetu przy otwarciu strony) -->
+<script type="module">
+  import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+  import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+
+  const view = document.getElementById("view");
+  const btn = document.getElementById("btn");
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
+  camera.position.set(900, 700, 900);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  view.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // Light
+  const aLight = new THREE.AmbientLight(0xffffff, 0.9);
+  scene.add(aLight);
+
+  const dLight = new THREE.DirectionalLight(0xffffff, 0.7);
+  dLight.position.set(500, 800, 300);
+  scene.add(dLight);
+
+  // Helper grid
+  const grid = new THREE.GridHelper(2000, 20);
+  scene.add(grid);
+
+  // Cabinet group
+  const cabinetGroup = new THREE.Group();
+  scene.add(cabinetGroup);
+
+  const materialBoard = new THREE.MeshStandardMaterial({ color: 0xd9d2c3, roughness: 0.9, metalness: 0.0 });
+  const materialEdge = new THREE.LineBasicMaterial({ color: 0x111111 });
+
+  function clearGroup(g){
+    while (g.children.length) g.remove(g.children[0]);
+  }
+
+  function addEdges(mesh){
+    const edges = new THREE.EdgesGeometry(mesh.geometry);
+    const line = new THREE.LineSegments(edges, materialEdge);
+    mesh.add(line);
+  }
+
+  // Create a board box (w,h,d) and position by center (x,y,z)
+  function addBoard(w, h, d, x, y, z){
+    const geom = new THREE.BoxGeometry(w, h, d);
+    const mesh = new THREE.Mesh(geom, materialBoard);
+    mesh.position.set(x, y, z);
+    addEdges(mesh);
+    cabinetGroup.add(mesh);
+    return mesh;
+  }
+
+  function generate(){
+    const W = Number(document.getElementById("W").value);
+    const H = Number(document.getElementById("H").value);
+    const D = Number(document.getElementById("D").value);
+    const T = Number(document.getElementById("T").value);
+    const S = Math.max(0, Math.min(10, Number(document.getElementById("S").value)));
+
+    if (![W,H,D,T].every(n => Number.isFinite(n) && n > 0)) {
+      alert("Nieprawidłowe wymiary.");
+      return;
+    }
+    if (W <= 2*T) {
+      alert("Szerokość za mała względem grubości płyty.");
+      return;
+    }
+
+    clearGroup(cabinetGroup);
+
+    // Coordinate system:
+    // X: width (left->right), Y: height (bottom->top), Z: depth (front->back)
+    // Put cabinet so bottom-front-left corner is near (0,0,0), but centered nicer:
+    const cx = W/2;
+    const cy = H/2;
+    const cz = D/2;
+
+    // Sides: thickness along X, full height H, full depth D
+    // Left side center at x = T/2
+    addBoard(T, H, D, T/2, cy, cz);
+    // Right side center at x = W - T/2
+    addBoard(T, H, D, W - T/2, cy, cz);
+
+    // Bottom: inner width, thickness along Y, full depth D
+    const innerW = W - 2*T;
+    addBoard(innerW, T, D, cx, T/2, cz);
+
+    // Top:
+    addBoard(innerW, T, D, cx, H - T/2, cz);
+
+    // Shelves: evenly spaced inside (between top and bottom boards)
+    if (S > 0) {
+      const usableH = H - 2*T;
+      for (let i=1; i<=S; i++){
+        const y = T + (usableH * i)/(S+1);
+        addBoard(innerW, T, D, cx, y, cz);
+      }
+    }
+
+    // Fit camera a bit
+    const maxDim = Math.max(W, H, D);
+    camera.position.set(maxDim*1.2, maxDim*0.9, maxDim*1.2);
+    controls.target.set(cx, cy, cz);
+    controls.update();
+  }
+
+  function resize(){
+    const rect = view.getBoundingClientRect();
+    const w = Math.max(300, rect.width);
+    const h = Math.max(300, rect.height);
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  window.addEventListener("resize", resize);
+  btn.addEventListener("click", () => { generate(); resize(); });
+
+  // init
+  generate();
+  resize();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+</script>
+</body>
+</html>
