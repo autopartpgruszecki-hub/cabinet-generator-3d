@@ -3,203 +3,530 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generator szafki – 3D podgląd + parametry</title>
+  <title>Generator szafki 3D + rysunki 2D (1 plik)</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, Arial, sans-serif; color: #111; }
-    header { padding: 14px 16px; border-bottom: 1px solid #e5e5e5; }
-    main { display: grid; grid-template-columns: 360px 1fr; gap: 12px; padding: 12px; }
-    @media (max-width: 900px){ main { grid-template-columns: 1fr; } }
-    .card { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
-    label { display:block; font-size: 14px; margin-top: 10px; }
-    input { width: 100%; padding: 8px 10px; margin-top: 6px; border: 1px solid #d0d0d0; border-radius: 8px; }
-    button { margin-top: 12px; padding: 9px 12px; border-radius: 10px; border: 1px solid #d0d0d0; background: #f7f7f7; cursor: pointer; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111; }
+    header { padding: 14px 16px; border-bottom: 1px solid #e5e5e5; display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
+    header b { font-size: 16px; }
+    .pill { padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; font-size: 12px; background: #fafafa; }
+    main { display: grid; grid-template-columns: 380px 1fr; gap: 12px; padding: 12px; }
+    @media (max-width: 980px){ main { grid-template-columns: 1fr; } }
+    .card { border: 1px solid #e5e5e5; border-radius: 12px; padding: 12px; background:#fff; }
+    h2 { margin: 0 0 10px; font-size: 16px; }
+    label { display:block; font-size: 13px; margin-top: 10px; }
+    input, select {
+      width: 100%; padding: 8px 10px; margin-top: 6px;
+      border: 1px solid #d0d0d0; border-radius: 10px; font-size: 14px;
+    }
+    button {
+      padding: 9px 12px; border-radius: 10px; border: 1px solid #d0d0d0;
+      background: #f7f7f7; cursor: pointer;
+    }
     button:hover { background: #efefef; }
-    #view { width: 100%; height: calc(100vh - 120px); border-radius: 10px; overflow: hidden; border: 1px solid #e5e5e5; }
-    .hint { font-size: 13px; line-height: 1.35; color: #333; margin-top: 10px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .row > * { flex: 1; min-width: 140px; }
+    #view3d { width: 100%; height: calc(100vh - 150px); border-radius: 12px; overflow: hidden; border: 1px solid #e5e5e5; }
+    #view2d { width: 100%; min-height: calc(100vh - 150px); border-radius: 12px; overflow: auto; border: 1px solid #e5e5e5; padding: 10px; background:#fafafa; display:none; }
+    .hint { font-size: 12.5px; color:#333; line-height: 1.35; margin-top: 10px; }
+    .danger { color:#b00020; }
+    table { width:100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px 6px; text-align:left; }
     code { background:#f4f4f4; padding: 2px 6px; border-radius: 6px; }
+    .topbar { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .topbar .row { flex:1; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#f4f4f4; padding:2px 6px; border-radius:6px; }
   </style>
 </head>
 <body>
 <header>
-  <b>Generator szafki – 3D podgląd</b>
-  <div class="hint">Lewy przycisk myszy: obrót · Prawy: przesunięcie · Kółko: zoom</div>
+  <b>Generator szafki — 3D podgląd + 2D płyty z nawiertami</b>
+  <span class="pill">Kliknij płytę w 3D → pokaże 2D + SVG do pobrania</span>
+  <span class="pill">Sterowanie 3D: LPM obrót · PPM przesuw · kółko zoom</span>
 </header>
 
 <main>
   <section class="card">
-    <h3 style="margin:0 0 6px;">Parametry (mm)</h3>
+    <h2>Parametry</h2>
 
-    <label>Szerokość (W)
+    <div id="status" class="hint danger"></div>
+
+    <label>Szerokość (W) [mm]
       <input id="W" type="number" value="600" min="200" max="2000" step="1">
     </label>
-
-    <label>Wysokość (H)
+    <label>Wysokość (H) [mm]
       <input id="H" type="number" value="720" min="200" max="2600" step="1">
     </label>
-
-    <label>Głębokość (D)
+    <label>Głębokość (D) [mm]
       <input id="D" type="number" value="560" min="150" max="1200" step="1">
     </label>
-
-    <label>Grubość płyty (T)
+    <label>Grubość płyty (T) [mm]
       <input id="T" type="number" value="18" min="12" max="28" step="1">
     </label>
-
     <label>Liczba półek
       <input id="S" type="number" value="2" min="0" max="10" step="1">
     </label>
 
-    <button id="btn">Generuj 3D</button>
-
-    <div class="hint">
-      To jest podgląd 3D korpusu (boki, góra, dół, półki).<br>
-      Jeśli chcesz: dodam fronty/drzwi, plecy, przegrody, oraz 2D rysunki płyt z otworami.
+    <div class="row" style="margin-top:12px;">
+      <button id="btnGen">Generuj 3D</button>
+      <button id="btnTo3D" disabled>Widok 3D</button>
+      <button id="btnTo2D" disabled>Widok 2D</button>
     </div>
 
     <div class="hint">
-      Jeśli zobaczysz pusty ekran: możliwe, że Twoja sieć blokuje CDN. Wtedy zrobimy wersję offline bez internetu.
+      <b>Jak używać:</b><br>
+      1) Kliknij <span class="kbd">Generuj 3D</span><br>
+      2) Kliknij dowolną płytę w 3D → przełączy się na 2D i pokaże nawierty<br>
+      3) W 2D kliknij <span class="kbd">Pobierz SVG</span>
+    </div>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:12px 0;">
+
+    <h2>Wybrany element</h2>
+    <div class="topbar">
+      <div class="row">
+        <label>Element (lista)
+          <select id="partSelect"></select>
+        </label>
+      </div>
+      <div class="row" style="align-items:end;">
+        <button id="btnDownloadSvg">Pobierz SVG (2D)</button>
+      </div>
+    </div>
+
+    <div id="partInfo" class="hint"></div>
+
+    <h2 style="margin-top:14px;">Otwory (dla elementu)</h2>
+    <div id="holesTable"></div>
+
+    <div class="hint">
+      Standardy wierceń w tym demo:<br>
+      • boki: system 32 (⌀5, X=37 mm od frontu, Y co 32 mm)<br>
+      • przykładowe otwory łączeń (demo) — do dopasowania pod Twoją technologię
     </div>
   </section>
 
-  <section id="view"></section>
+  <section>
+    <div id="view3d"></div>
+    <div id="view2d">
+      <div class="row" style="margin-bottom:10px;">
+        <button id="btnBackFrom2D">← Wróć do 3D</button>
+        <div class="hint" style="margin:0; flex:3;">
+          2D: rysunek płyty (mm jako px). To SVG możesz zapisać/drukować albo użyć w dalszym eksporcie.
+        </div>
+      </div>
+      <div id="svgWrap"></div>
+    </div>
+  </section>
 </main>
 
-<!-- Three.js z CDN (wymaga internetu przy otwarciu strony) -->
 <script type="module">
-  import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
-  import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+  const status = document.getElementById("status");
 
-  const view = document.getElementById("view");
-  const btn = document.getElementById("btn");
-
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
-
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
-  camera.position.set(900, 700, 900);
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  view.appendChild(renderer.domElement);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  // Light
-  const aLight = new THREE.AmbientLight(0xffffff, 0.9);
-  scene.add(aLight);
-
-  const dLight = new THREE.DirectionalLight(0xffffff, 0.7);
-  dLight.position.set(500, 800, 300);
-  scene.add(dLight);
-
-  // Helper grid
-  const grid = new THREE.GridHelper(2000, 20);
-  scene.add(grid);
-
-  // Cabinet group
-  const cabinetGroup = new THREE.Group();
-  scene.add(cabinetGroup);
-
-  const materialBoard = new THREE.MeshStandardMaterial({ color: 0xd9d2c3, roughness: 0.9, metalness: 0.0 });
-  const materialEdge = new THREE.LineBasicMaterial({ color: 0x111111 });
-
-  function clearGroup(g){
-    while (g.children.length) g.remove(g.children[0]);
+  // --- Robust import (CDN) with readable error
+  let THREE, OrbitControls;
+  try {
+    THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+    ({ OrbitControls } = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js"));
+    status.textContent = "";
+  } catch (e) {
+    status.textContent =
+      "Nie udało się załadować Three.js z CDN (brak internetu lub blokada). " +
+      "Wrzuć plik na GitHub Pages (https) albo użyj innej sieci. Błąd: " + (e?.message || e);
+    throw e;
   }
 
-  function addEdges(mesh){
-    const edges = new THREE.EdgesGeometry(mesh.geometry);
-    const line = new THREE.LineSegments(edges, materialEdge);
-    mesh.add(line);
-  }
+  // --- DOM refs
+  const view3d = document.getElementById("view3d");
+  const view2d = document.getElementById("view2d");
+  const svgWrap = document.getElementById("svgWrap");
 
-  // Create a board box (w,h,d) and position by center (x,y,z)
-  function addBoard(w, h, d, x, y, z){
-    const geom = new THREE.BoxGeometry(w, h, d);
-    const mesh = new THREE.Mesh(geom, materialBoard);
-    mesh.position.set(x, y, z);
-    addEdges(mesh);
-    cabinetGroup.add(mesh);
-    return mesh;
-  }
+  const btnGen = document.getElementById("btnGen");
+  const btnTo3D = document.getElementById("btnTo3D");
+  const btnTo2D = document.getElementById("btnTo2D");
+  const btnBackFrom2D = document.getElementById("btnBackFrom2D");
+  const btnDownloadSvg = document.getElementById("btnDownloadSvg");
 
-  function generate(){
+  const partSelect = document.getElementById("partSelect");
+  const partInfo = document.getElementById("partInfo");
+  const holesTable = document.getElementById("holesTable");
+
+  // --- Spec
+  function getSpec(){
     const W = Number(document.getElementById("W").value);
     const H = Number(document.getElementById("H").value);
     const D = Number(document.getElementById("D").value);
     const T = Number(document.getElementById("T").value);
     const S = Math.max(0, Math.min(10, Number(document.getElementById("S").value)));
+    if (![W,H,D,T].every(n => Number.isFinite(n) && n > 0)) throw new Error("Nieprawidłowe wymiary.");
+    if (W <= 2*T) throw new Error("Szerokość (W) jest za mała względem grubości (T).");
+    return { W,H,D,T,S };
+  }
 
-    if (![W,H,D,T].every(n => Number.isFinite(n) && n > 0)) {
-      alert("Nieprawidłowe wymiary.");
-      return;
+  // --- Model (parts + holes)
+  // Part coordinate conventions for 2D:
+  // - Each part is a rectangle w x h in mm.
+  // - Holes: (x,y) in mm where origin is bottom-left (y up).
+  function buildModel(spec){
+    const {W,H,D,T,S} = spec;
+    const innerW = W - 2*T;
+
+    const parts = [
+      { key:"side_left",  name:"Bok lewy",  w:D, h:H, t:T, kind:"side" },
+      { key:"side_right", name:"Bok prawy", w:D, h:H, t:T, kind:"side" },
+      { key:"bottom",     name:"Dno",       w:innerW, h:D, t:T, kind:"hpanel" },
+      { key:"top",        name:"Wieniec",   w:innerW, h:D, t:T, kind:"hpanel" },
+    ];
+    for (let i=1; i<=S; i++){
+      parts.push({ key:`shelf_${i}`, name:`Półka ${i}`, w:innerW, h:D, t:T, kind:"hpanel" });
     }
-    if (W <= 2*T) {
-      alert("Szerokość za mała względem grubości płyty.");
-      return;
+
+    const holes = [
+      ...genSideSystem32(spec, "side_left"),
+      ...genSideSystem32(spec, "side_right"),
+      ...genSideConnectorsDemo(spec, "side_left"),
+      ...genSideConnectorsDemo(spec, "side_right"),
+      ...genHPanelMatesDemo(spec, "bottom"),
+      ...genHPanelMatesDemo(spec, "top"),
+    ];
+
+    return { spec, parts, holes };
+  }
+
+  // System 32 on side panels: 37mm from front, Ø5, step 32.
+  function genSideSystem32(spec, partKey){
+    const {H} = spec;
+    const x = 37;
+    const startY = 64;
+    const endY = H - 64;
+    const out = [];
+    for (let y=startY; y<=endY; y+=32){
+      out.push({ partKey, x, y, dia:5, depth:12, type:"shelf_pin" });
     }
+    return out;
+  }
+
+  // Demo connectors on side panels (illustrative)
+  function genSideConnectorsDemo(spec, partKey){
+    const {H, D} = spec;
+    const out = [];
+    const y1 = 80;
+    const y2 = H - 80;
+    // near back
+    out.push({ partKey, x:D-9, y:y1, dia:7, depth:50, type:"confirmat_demo" });
+    out.push({ partKey, x:D-9, y:y2, dia:7, depth:50, type:"confirmat_demo" });
+    // nearer front
+    out.push({ partKey, x:60, y:y1, dia:7, depth:50, type:"confirmat_demo" });
+    out.push({ partKey, x:60, y:y2, dia:7, depth:50, type:"confirmat_demo" });
+    return out;
+  }
+
+  // Demo mate holes on top/bottom (illustrative)
+  function genHPanelMatesDemo(spec, partKey){
+    const {W, D, T} = spec;
+    const innerW = W - 2*T;
+    const out = [];
+    const yBack = D - 9;
+    const yFront = 60;
+    out.push({ partKey, x:80, y:yBack,  dia:5, depth:T, type:"mate_demo" });
+    out.push({ partKey, x:80, y:yFront, dia:5, depth:T, type:"mate_demo" });
+    out.push({ partKey, x:innerW-80, y:yBack,  dia:5, depth:T, type:"mate_demo" });
+    out.push({ partKey, x:innerW-80, y:yFront, dia:5, depth:T, type:"mate_demo" });
+    return out;
+  }
+
+  // --- SVG renderer (2D)
+  function renderPartSvg(part, holes){
+    const pad = 40;
+    const w = part.w;
+    const h = part.h;
+
+    const title = `${part.name} — ${Math.round(part.w)}×${Math.round(part.h)}×${Math.round(part.t)} mm`;
+    const holeEls = holes.map((ho) => {
+      const cx = pad + ho.x;
+      const cy = pad + (h - ho.y); // flip y for SVG
+      const r = ho.dia / 2;
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="#111" fill="none" stroke-width="1.5" />`;
+    }).join("\n");
+
+    // simple dims
+    const dim = `
+      <text x="${pad}" y="22" font-family="sans-serif" font-size="16" fill="#111">${escapeXml(title)}</text>
+
+      <!-- width -->
+      <line x1="${pad}" y1="${pad+h+18}" x2="${pad+w}" y2="${pad+h+18}" stroke="#111" />
+      <line x1="${pad}" y1="${pad+h+12}" x2="${pad}" y2="${pad+h+24}" stroke="#111" />
+      <line x1="${pad+w}" y1="${pad+h+12}" x2="${pad+w}" y2="${pad+h+24}" stroke="#111" />
+      <text x="${pad+w/2}" y="${pad+h+36}" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#111">${Math.round(part.w)} mm</text>
+
+      <!-- height -->
+      <line x1="${pad+w+18}" y1="${pad}" x2="${pad+w+18}" y2="${pad+h}" stroke="#111" />
+      <line x1="${pad+w+12}" y1="${pad}" x2="${pad+w+24}" y2="${pad}" stroke="#111" />
+      <line x1="${pad+w+12}" y1="${pad+h}" x2="${pad+w+24}" y2="${pad+h}" stroke="#111" />
+      <text x="${pad+w+18}" y="${pad+h/2}" text-anchor="middle"
+            transform="rotate(-90 ${pad+w+18} ${pad+h/2})"
+            font-family="sans-serif" font-size="14" fill="#111">${Math.round(part.h)} mm</text>
+    `;
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w+pad*2+60}" height="${h+pad*2+60}" viewBox="0 0 ${w+pad*2+60} ${h+pad*2+60}">
+  <rect x="${pad}" y="${pad}" width="${w}" height="${h}" fill="none" stroke="#111" stroke-width="2" />
+  ${holeEls}
+  ${dim}
+</svg>`;
+  }
+
+  function escapeXml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&apos;");
+  }
+
+  function downloadText(filename, text, mime){
+    const blob = new Blob([text], { type: mime || "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function renderHolesTable(holes){
+    const rows = holes.map((h,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${h.type}</td>
+        <td>${round1(h.x)}</td>
+        <td>${round1(h.y)}</td>
+        <td>${round1(h.dia)}</td>
+        <td>${round1(h.depth)}</td>
+      </tr>
+    `).join("");
+    holesTable.innerHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Typ</th><th>X</th><th>Y</th><th>Ø</th><th>Gł.</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="6">Brak otworów</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+  function round1(n){ return (Number.isFinite(n) ? (Math.round(n*10)/10).toString() : ""); }
+
+  // --- 3D Scene
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 20000);
+  camera.position.set(900, 700, 900);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  view3d.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.95));
+  const dLight = new THREE.DirectionalLight(0xffffff, 0.65);
+  dLight.position.set(500, 900, 200);
+  scene.add(dLight);
+
+  const grid = new THREE.GridHelper(3000, 30);
+  grid.position.y = 0;
+  scene.add(grid);
+
+  const cabinetGroup = new THREE.Group();
+  scene.add(cabinetGroup);
+
+  // Materials
+  const matBoard = new THREE.MeshStandardMaterial({ color: 0xd9d2c3, roughness: 0.9, metalness: 0.0 });
+  const matSelected = new THREE.MeshStandardMaterial({ color: 0xc8d8ff, roughness: 0.85, metalness: 0.0 });
+  const matEdge = new THREE.LineBasicMaterial({ color: 0x111111 });
+
+  // State
+  let model = null;
+  let selectedPartKey = null;
+
+  function clearGroup(g){ while (g.children.length) g.remove(g.children[0]); }
+
+  function addEdges(mesh){
+    const edges = new THREE.EdgesGeometry(mesh.geometry);
+    const line = new THREE.LineSegments(edges, matEdge);
+    mesh.add(line);
+  }
+
+  // Make a board mesh with metadata (partKey)
+  function addBoardMesh(partKey, w, h, d, x, y, z){
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), matBoard);
+    mesh.position.set(x,y,z);
+    mesh.userData.partKey = partKey;
+    addEdges(mesh);
+    cabinetGroup.add(mesh);
+    return mesh;
+  }
+
+  function syncPartSelect(){
+    partSelect.innerHTML = model.parts.map(p => `<option value="${p.key}">${p.name}</option>`).join("");
+    partSelect.value = selectedPartKey || model.parts[0].key;
+  }
+
+  function selectPart(partKey, switchTo2D = false){
+    if (!model) return;
+    selectedPartKey = partKey;
+
+    // highlight in 3D
+    cabinetGroup.traverse(obj => {
+      if (obj.isMesh && obj.userData?.partKey) {
+        obj.material = (obj.userData.partKey === selectedPartKey) ? matSelected : matBoard;
+      }
+    });
+
+    syncPartSelect();
+
+    const part = model.parts.find(p => p.key === selectedPartKey) || model.parts[0];
+    const holes = model.holes.filter(h => h.partKey === selectedPartKey);
+
+    partInfo.innerHTML = `
+      <b>${part.name}</b><br>
+      Wymiary: <code>${Math.round(part.w)}×${Math.round(part.h)}×${Math.round(part.t)} mm</code><br>
+      Klucz: <code>${part.key}</code>
+    `;
+
+    renderHolesTable(holes);
+
+    // render 2D
+    const svg = renderPartSvg(part, holes);
+    svgWrap.innerHTML = svg;
+
+    btnTo2D.disabled = false;
+    btnTo3D.disabled = false;
+
+    if (switchTo2D) show2D();
+  }
+
+  function show3D(){
+    view3d.style.display = "block";
+    view2d.style.display = "none";
+    btnTo3D.disabled = true;
+    btnTo2D.disabled = false;
+    resize();
+  }
+  function show2D(){
+    view3d.style.display = "none";
+    view2d.style.display = "block";
+    btnTo2D.disabled = true;
+    btnTo3D.disabled = false;
+  }
+
+  function generate3D(){
+    const spec = getSpec();
+    model = buildModel(spec);
 
     clearGroup(cabinetGroup);
 
-    // Coordinate system:
-    // X: width (left->right), Y: height (bottom->top), Z: depth (front->back)
-    // Put cabinet so bottom-front-left corner is near (0,0,0), but centered nicer:
-    const cx = W/2;
-    const cy = H/2;
-    const cz = D/2;
-
-    // Sides: thickness along X, full height H, full depth D
-    // Left side center at x = T/2
-    addBoard(T, H, D, T/2, cy, cz);
-    // Right side center at x = W - T/2
-    addBoard(T, H, D, W - T/2, cy, cz);
-
-    // Bottom: inner width, thickness along Y, full depth D
+    const {W,H,D,T,S} = spec;
     const innerW = W - 2*T;
-    addBoard(innerW, T, D, cx, T/2, cz);
 
-    // Top:
-    addBoard(innerW, T, D, cx, H - T/2, cz);
+    // Coordinate system:
+    // X width (0..W), Y height (0..H), Z depth (0..D)
+    // Place cabinet on grid with bottom at y = 0.
 
-    // Shelves: evenly spaced inside (between top and bottom boards)
+    // sides
+    addBoardMesh("side_left",  T, H, D,  T/2,     H/2, D/2);
+    addBoardMesh("side_right", T, H, D,  W - T/2, H/2, D/2);
+
+    // bottom / top
+    addBoardMesh("bottom", innerW, T, D, W/2, T/2,     D/2);
+    addBoardMesh("top",    innerW, T, D, W/2, H - T/2, D/2);
+
+    // shelves
     if (S > 0) {
       const usableH = H - 2*T;
       for (let i=1; i<=S; i++){
         const y = T + (usableH * i)/(S+1);
-        addBoard(innerW, T, D, cx, y, cz);
+        addBoardMesh(`shelf_${i}`, innerW, T, D, W/2, y, D/2);
       }
     }
 
-    // Fit camera a bit
-    const maxDim = Math.max(W, H, D);
-    camera.position.set(maxDim*1.2, maxDim*0.9, maxDim*1.2);
-    controls.target.set(cx, cy, cz);
+    // Fit camera
+    const maxDim = Math.max(W,H,D);
+    camera.position.set(maxDim*1.15, maxDim*0.85, maxDim*1.15);
+    controls.target.set(W/2, H/2, D/2);
     controls.update();
+
+    // Select default
+    selectPart(model.parts[0].key, false);
+    show3D();
   }
 
+  // --- Picking (click mesh -> select)
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  renderer.domElement.addEventListener("pointerdown", (ev) => {
+    if (!model) return;
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -(((ev.clientY - rect.top) / rect.height) * 2 - 1);
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(cabinetGroup.children, true);
+
+    const hit = intersects.find(i => i.object?.userData?.partKey);
+    if (hit) {
+      selectPart(hit.object.userData.partKey, true); // switch to 2D on click
+    }
+  });
+
+  // --- Resize
   function resize(){
-    const rect = view.getBoundingClientRect();
-    const w = Math.max(300, rect.width);
-    const h = Math.max(300, rect.height);
+    const rect = view3d.getBoundingClientRect();
+    const w = Math.max(320, rect.width);
+    const h = Math.max(320, rect.height);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
-
   window.addEventListener("resize", resize);
-  btn.addEventListener("click", () => { generate(); resize(); });
 
-  // init
-  generate();
-  resize();
+  // --- UI events
+  btnGen.addEventListener("click", () => {
+    try { generate3D(); resize(); }
+    catch(e){ alert(e?.message || e); }
+  });
 
+  btnTo3D.addEventListener("click", show3D);
+  btnTo2D.addEventListener("click", show2D);
+  btnBackFrom2D.addEventListener("click", show3D);
+
+  partSelect.addEventListener("change", () => {
+    selectPart(partSelect.value, true);
+  });
+
+  btnDownloadSvg.addEventListener("click", () => {
+    if (!model) return;
+    const part = model.parts.find(p => p.key === selectedPartKey) || model.parts[0];
+    const holes = model.holes.filter(h => h.partKey === part.key);
+    const svg = renderPartSvg(part, holes);
+    downloadText(`${part.key}.svg`, svg, "image/svg+xml");
+  });
+
+  // --- Animate
   function animate(){
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
   }
   animate();
+
+  // init
+  generate3D();
+  resize();
 </script>
 </body>
 </html>
