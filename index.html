@@ -4,6 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Generator szafki 3D + rysunki 2D (1 plik)</title>
+  <script type="importmap">
+{
+  "imports": {
+    "three": "./three/build/three.module.js"
+  }
+}
+</script>
+
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111; }
@@ -122,11 +130,23 @@
 
 <script type="module">
   const status = document.getElementById("status");
+function showErr(e){
+  const msg = (e && (e.message || e.toString())) || "Unknown error";
+  status.textContent = "BŁĄD: " + msg;
+  console.error(e);
+}
+window.addEventListener("error", (ev) => showErr(ev.error || ev.message));
+window.addEventListener("unhandledrejection", (ev) => showErr(ev.reason));
+status.textContent = "Start…";
+
+  const status = document.getElementById("status");
 
   // --- Robust  (CDN) with readable error
   // --- Offline/local imports (GitHub Pages friendly)
 import * as THREE from "./three/build/three.module.js";
 import { OrbitControls } from "./three/examples/jsm/controls/OrbitControls.js";
+status.textContent = "Three.js OK, rev=" + THREE.REVISION;
+
 
 console.log("THREE OK, revision =", THREE.REVISION);
 status.textContent = "Three.js załadowany: r" + THREE.REVISION;
@@ -492,10 +512,14 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
   window.addEventListener("resize", resize);
 
   // --- UI events
-  btnGen.addEventListener("click", () => {
-    try { generate3D(); resize(); }
-    catch(e){ alert(e?.message || e); }
-  });
+btnGen.addEventListener("click", () => {
+  try {
+    generate3D();
+    resize();
+  } catch (e) {
+    showErr(e);
+  }
+});
 
   btnTo3D.addEventListener("click", show3D);
   btnTo2D.addEventListener("click", show2D);
@@ -522,11 +546,19 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
   animate();
 
   // init
+// init
+try {
   generate3D();
   resize();
+  status.textContent += " | wygenerowano 3D";
+} catch (e) {
+  showErr(e);
+}
+
 </script>
 </body>
 </html>
+
 
 
 
