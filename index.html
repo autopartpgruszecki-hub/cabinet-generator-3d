@@ -127,6 +127,13 @@
     </div>
   </section>
 </main>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./three/build/three.module.js"
+  }
+}
+</script>
 
 <script type="module">
   const status = document.getElementById("status");
@@ -143,9 +150,11 @@ status.textContent = "Start…";
 
   // --- Robust  (CDN) with readable error
   // --- Offline/local imports (GitHub Pages friendly)
-import * as THREE from "./three/build/three.module.js";
+import * as THREE from "three";
 import { OrbitControls } from "./three/examples/jsm/controls/OrbitControls.js";
-status.textContent = "Three.js OK, rev=" + THREE.REVISION;
+const status = document.getElementById("status");
+status.textContent = "Three.js OK rev=" + THREE.REVISION;
+
 
 
 console.log("THREE OK, revision =", THREE.REVISION);
@@ -558,6 +567,7 @@ try {
 </script>
 </body>
 </html>
+
 
 
 
