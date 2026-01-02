@@ -4,13 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Generator szafki 3D + rysunki 2D (1 plik)</title>
+
+  <!-- IMPORTANT: this maps bare import "three" used by OrbitControls -->
   <script type="importmap">
-{
-  "imports": {
-    "three": "./three/build/three.module.js"
+  {
+    "imports": {
+      "three": "./three/build/three.module.js"
+    }
   }
-}
-</script>
+  </script>
 
   <style>
     * { box-sizing: border-box; }
@@ -46,6 +48,7 @@
     .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background:#f4f4f4; padding:2px 6px; border-radius:6px; }
   </style>
 </head>
+
 <body>
 <header>
   <b>Generator szafki — 3D podgląd + 2D płyty z nawiertami</b>
@@ -127,40 +130,23 @@
     </div>
   </section>
 </main>
-<script type="importmap">
-{
-  "imports": {
-    "three": "./three/build/three.module.js"
-  }
-}
-</script>
 
 <script type="module">
+  // ---- imports (work on GitHub Pages thanks to importmap)
+  import * as THREE from "three";
+  import { OrbitControls } from "./three/examples/jsm/controls/OrbitControls.js";
+
+  // ---- status + error handling
   const status = document.getElementById("status");
-function showErr(e){
-  const msg = (e && (e.message || e.toString())) || "Unknown error";
-  status.textContent = "BŁĄD: " + msg;
-  console.error(e);
-}
-window.addEventListener("error", (ev) => showErr(ev.error || ev.message));
-window.addEventListener("unhandledrejection", (ev) => showErr(ev.reason));
-status.textContent = "Start…";
+  function showErr(e){
+    const msg = (e && (e.message || e.toString())) || "Unknown error";
+    status.textContent = "BŁĄD: " + msg;
+    console.error(e);
+  }
+  window.addEventListener("error", (ev) => showErr(ev.error || ev.message));
+  window.addEventListener("unhandledrejection", (ev) => showErr(ev.reason));
 
-  const status = document.getElementById("status");
-
-  // --- Robust  (CDN) with readable error
-  // --- Offline/local imports (GitHub Pages friendly)
-import * as THREE from "three";
-import { OrbitControls } from "./three/examples/jsm/controls/OrbitControls.js";
-const status = document.getElementById("status");
-status.textContent = "Three.js OK rev=" + THREE.REVISION;
-
-
-
-console.log("THREE OK, revision =", THREE.REVISION);
-status.textContent = "Three.js załadowany: r" + THREE.REVISION;
-
-
+  status.textContent = "Three.js OK rev=" + THREE.REVISION;
 
   // --- DOM refs
   const view3d = document.getElementById("view3d");
@@ -190,9 +176,6 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
   }
 
   // --- Model (parts + holes)
-  // Part coordinate conventions for 2D:
-  // - Each part is a rectangle w x h in mm.
-  // - Holes: (x,y) in mm where origin is bottom-left (y up).
   function buildModel(spec){
     const {W,H,D,T,S} = spec;
     const innerW = W - 2*T;
@@ -219,7 +202,6 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     return { spec, parts, holes };
   }
 
-  // System 32 on side panels: 37mm from front, Ø5, step 32.
   function genSideSystem32(spec, partKey){
     const {H} = spec;
     const x = 37;
@@ -232,22 +214,18 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     return out;
   }
 
-  // Demo connectors on side panels (illustrative)
   function genSideConnectorsDemo(spec, partKey){
     const {H, D} = spec;
     const out = [];
     const y1 = 80;
     const y2 = H - 80;
-    // near back
     out.push({ partKey, x:D-9, y:y1, dia:7, depth:50, type:"confirmat_demo" });
     out.push({ partKey, x:D-9, y:y2, dia:7, depth:50, type:"confirmat_demo" });
-    // nearer front
     out.push({ partKey, x:60, y:y1, dia:7, depth:50, type:"confirmat_demo" });
     out.push({ partKey, x:60, y:y2, dia:7, depth:50, type:"confirmat_demo" });
     return out;
   }
 
-  // Demo mate holes on top/bottom (illustrative)
   function genHPanelMatesDemo(spec, partKey){
     const {W, D, T} = spec;
     const innerW = W - 2*T;
@@ -270,22 +248,19 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     const title = `${part.name} — ${Math.round(part.w)}×${Math.round(part.h)}×${Math.round(part.t)} mm`;
     const holeEls = holes.map((ho) => {
       const cx = pad + ho.x;
-      const cy = pad + (h - ho.y); // flip y for SVG
+      const cy = pad + (h - ho.y);
       const r = ho.dia / 2;
       return `<circle cx="${cx}" cy="${cy}" r="${r}" stroke="#111" fill="none" stroke-width="1.5" />`;
     }).join("\n");
 
-    // simple dims
     const dim = `
       <text x="${pad}" y="22" font-family="sans-serif" font-size="16" fill="#111">${escapeXml(title)}</text>
 
-      <!-- width -->
       <line x1="${pad}" y1="${pad+h+18}" x2="${pad+w}" y2="${pad+h+18}" stroke="#111" />
       <line x1="${pad}" y1="${pad+h+12}" x2="${pad}" y2="${pad+h+24}" stroke="#111" />
       <line x1="${pad+w}" y1="${pad+h+12}" x2="${pad+w}" y2="${pad+h+24}" stroke="#111" />
       <text x="${pad+w/2}" y="${pad+h+36}" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#111">${Math.round(part.w)} mm</text>
 
-      <!-- height -->
       <line x1="${pad+w+18}" y1="${pad}" x2="${pad+w+18}" y2="${pad+h}" stroke="#111" />
       <line x1="${pad+w+12}" y1="${pad}" x2="${pad+w+24}" y2="${pad}" stroke="#111" />
       <line x1="${pad+w+12}" y1="${pad+h}" x2="${pad+w+24}" y2="${pad+h}" stroke="#111" />
@@ -368,12 +343,10 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
   const cabinetGroup = new THREE.Group();
   scene.add(cabinetGroup);
 
-  // Materials
   const matBoard = new THREE.MeshStandardMaterial({ color: 0xd9d2c3, roughness: 0.9, metalness: 0.0 });
   const matSelected = new THREE.MeshStandardMaterial({ color: 0xc8d8ff, roughness: 0.85, metalness: 0.0 });
   const matEdge = new THREE.LineBasicMaterial({ color: 0x111111 });
 
-  // State
   let model = null;
   let selectedPartKey = null;
 
@@ -385,7 +358,6 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     mesh.add(line);
   }
 
-  // Make a board mesh with metadata (partKey)
   function addBoardMesh(partKey, w, h, d, x, y, z){
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), matBoard);
     mesh.position.set(x,y,z);
@@ -404,7 +376,6 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     if (!model) return;
     selectedPartKey = partKey;
 
-    // highlight in 3D
     cabinetGroup.traverse(obj => {
       if (obj.isMesh && obj.userData?.partKey) {
         obj.material = (obj.userData.partKey === selectedPartKey) ? matSelected : matBoard;
@@ -424,7 +395,6 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
 
     renderHolesTable(holes);
 
-    // render 2D
     const svg = renderPartSvg(part, holes);
     svgWrap.innerHTML = svg;
 
@@ -457,19 +427,12 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     const {W,H,D,T,S} = spec;
     const innerW = W - 2*T;
 
-    // Coordinate system:
-    // X width (0..W), Y height (0..H), Z depth (0..D)
-    // Place cabinet on grid with bottom at y = 0.
-
-    // sides
     addBoardMesh("side_left",  T, H, D,  T/2,     H/2, D/2);
     addBoardMesh("side_right", T, H, D,  W - T/2, H/2, D/2);
 
-    // bottom / top
     addBoardMesh("bottom", innerW, T, D, W/2, T/2,     D/2);
     addBoardMesh("top",    innerW, T, D, W/2, H - T/2, D/2);
 
-    // shelves
     if (S > 0) {
       const usableH = H - 2*T;
       for (let i=1; i<=S; i++){
@@ -478,18 +441,15 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
       }
     }
 
-    // Fit camera
     const maxDim = Math.max(W,H,D);
     camera.position.set(maxDim*1.15, maxDim*0.85, maxDim*1.15);
     controls.target.set(W/2, H/2, D/2);
     controls.update();
 
-    // Select default
     selectPart(model.parts[0].key, false);
     show3D();
   }
 
-  // --- Picking (click mesh -> select)
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
@@ -504,12 +464,9 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
     const intersects = raycaster.intersectObjects(cabinetGroup.children, true);
 
     const hit = intersects.find(i => i.object?.userData?.partKey);
-    if (hit) {
-      selectPart(hit.object.userData.partKey, true); // switch to 2D on click
-    }
+    if (hit) selectPart(hit.object.userData.partKey, true);
   });
 
-  // --- Resize
   function resize(){
     const rect = view3d.getBoundingClientRect();
     const w = Math.max(320, rect.width);
@@ -520,15 +477,10 @@ status.textContent = "Three.js załadowany: r" + THREE.REVISION;
   }
   window.addEventListener("resize", resize);
 
-  // --- UI events
-btnGen.addEventListener("click", () => {
-  try {
-    generate3D();
-    resize();
-  } catch (e) {
-    showErr(e);
-  }
-});
+  btnGen.addEventListener("click", () => {
+    try { generate3D(); resize(); }
+    catch(e){ showErr(e); }
+  });
 
   btnTo3D.addEventListener("click", show3D);
   btnTo2D.addEventListener("click", show2D);
@@ -546,7 +498,6 @@ btnGen.addEventListener("click", () => {
     downloadText(`${part.key}.svg`, svg, "image/svg+xml");
   });
 
-  // --- Animate
   function animate(){
     requestAnimationFrame(animate);
     controls.update();
@@ -554,21 +505,13 @@ btnGen.addEventListener("click", () => {
   }
   animate();
 
-  // init
-// init
-try {
-  generate3D();
-  resize();
-  status.textContent += " | wygenerowano 3D";
-} catch (e) {
-  showErr(e);
-}
-
+  try {
+    generate3D();
+    resize();
+    status.textContent += " | wygenerowano 3D";
+  } catch (e) {
+    showErr(e);
+  }
 </script>
 </body>
 </html>
-
-
-
-
-
