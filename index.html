@@ -127,7 +127,10 @@
   // --- Offline/local imports (GitHub Pages friendly)
 import * as THREE from "./three/build/three.module.js";
 import { OrbitControls } from "./three/examples/jsm/controls/OrbitControls.js";
-status.textContent = "";
+
+console.log("THREE OK, revision =", THREE.REVISION);
+status.textContent = "Three.js załadowany: r" + THREE.REVISION;
+
 
 
   // --- DOM refs
@@ -524,5 +527,6 @@ status.textContent = "";
 </script>
 </body>
 </html>
+
 
 
